@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>jquery省市联动</title>
+    <link type="text/css" rel="stylesheet" href="../css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="row main">
+            <div class="col-lg-12">
+                <div class="row" style="margin-top: 30px;text-align: center;">
+                    <a href="#" class="btn btn-info btn-lg active" role="button" id="sel_city">点击选取省市区</a>
+                    <br/>
+                    <span id="show" style="color: #31b0d5;margin: 30px 0;font-size: 16px;display: inline-block;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script style="text/javascript" src="../js/jquery-1.8.0.min.js"></script>
+    <script type="text/javascript" src="../js/city.js"></script>
+    <script type="text/javascript" src="../js/picker.min.js"></script>
+    <script type="text/javascript">
+        var nameEl=document.getElementById("sel_city");
+        var first=[];//省，直辖市
+        var second=[];//市
+        var third=[];//区
+        var selectedIndex=[0,0,0];//默认选中的地区
+        var checked=[0,0,0];//已选选项
+
+        function reateList(obj,list){
+            obj.forEach(function(item,index,arr){
+                var temp=new Object();
+                temp.text=item.name;
+                temp.value=index;
+                list.push(temp);
+            });
+        }
+        reateList(city,first);//添加省份数据
+
+        //初始化，默认显示第一个省，关联的第一个市，第一个区
+        if(city[selectedIndex[0]].hasOwnProperty("sub")){
+            reateList(city[selectedIndex[0]].sub,second);
+        }else{
+            second=[{text:'',value:0}];
+        }
+        if(city[selectedIndex[0]].sub[selectedIndex[1]].hasOwnProperty("sub")){
+            reateList(city[selectedIndex[0]].sub[selectedIndex[1]].sub,third);
+        }else{
+            third=[{text:'',value:0}];
+        }
+        //初始化获取picker插件对象
+        var picker=new Picker({
+            data:[first,second,third],
+            selectedIndex: selectedIndex,
+            title: "地址选中"
+        });
+        // 当用户点击确定的时候，会派发picker.select事件，同时会传递每列选择的值数组selectVal和每列选择的序号数组selectIndex。
+        picker.on("picker.select",function(selectedVal,selectedIndex){
+            var text1=first[selectedIndex[0]].text;
+            var text2=second[selectedIndex[1]].text;
+            var text3=third[selectedIndex[2]] ? third[selectedIndex[2]].text:'';
+            $("#show").html("省:"+text1+"<br>市:"+text2+"<br>区:"+text3);
+        });
+        //当一列滚动停止的时候，会派发picker.change事件，同时会传递列序号index及滚动停止的位置selectIndex。
+        picker.on("picker.change",function(index,selectedIndex){
+            if(index===0){
+                firstChange();
+            }else if(index===1){
+                secondChange();
+            }
+            //滚动身份带动市和区
+            function firstChange(){
+                second=[];
+                third=[];
+                checked[0]=selectedIndex;
+                var firstCity=city[selectedIndex];
+                if(firstCity.hasOwnProperty("sub")){
+                    reateList(firstCity.sub,second);
+                    var secondCity=city[selectedIndex].sub[0];
+                    if(secondCity.hasOwnProperty("sub")){
+                        reateList(secondCity.sub,third);
+                    }else{
+                        third=[{text:'',value:0}];
+                        checked[2]=0;
+                    }
+                }else{
+                    second=[{text:'',value:0}];
+                    third=[{text:'',value:0}];
+                    checked[1]=0;
+                    checked[2]=0;
+                }
+                picker.refillColumn(1,second);
+                picker.refillColumn(2,third);
+                picker.scrollColumn(1,0);
+                picker.scrollColumn(2,0);
+            }
+            //滚动市只带动区，不带动省
+            function secondChange(){
+                third=[];
+                checked[1]=selectedIndex;
+                var first_index=checked[0];
+                if(city[first_index].sub[selectedIndex].hasOwnProperty("sub")){
+                    var secondCity=city[first_index].sub[selectedIndex];
+                    reateList(secondCity.sub,third);
+                    picker.refillColumn(2,third);
+                    picker.refillColumn(2,0);
+                }else{
+                    third=[{text: '',value: 0}];
+                    checked[0]=0;
+                    picker.refillColumn(2,third);
+                    picker.refillColumn(2,0);
+                }
+            }
+        });
+        //当用户点击确定的时候，如果本次选择的数据和上一次不一致，会派发picker.valuechange事件，同时会传递每列选择的值数组selectVal和每列选择的序号数组selectIndex。
+        picker.on("picker.valuechange",function(selectedVal,selectedIndex){
+            console.log(selectedVal);
+            console.log(selectedIndex);
+        });
+        //show 方法，展示picker菜单
+        nameEl.addEventListener("click",function(){
+            picker.show();
+        });
+    </script>
+</body>
+</html>
